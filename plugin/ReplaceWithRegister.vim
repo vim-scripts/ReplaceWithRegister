@@ -57,6 +57,8 @@
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 "
 " REVISION	DATE		REMARKS 
+"   1.01.008	06-Oct-2009	Do not define "gr" mapping for select mode;
+"				printable characters should start insert mode. 
 "   1.00.007	05-Jul-2009	Renamed from ingooperators.vim. 
 "				Replaced g:register with call to
 "				s:SetRegister(). 
@@ -168,8 +170,8 @@ endif
 if ! hasmapto('<Plug>ReplaceWithRegisterLine', 'n')
     nmap <silent> grr <Plug>ReplaceWithRegisterLine
 endif
-if ! hasmapto('<Plug>ReplaceWithRegisterOperator', 'v')
-    vmap <silent> gr <Plug>ReplaceWithRegisterOperator
+if ! hasmapto('<Plug>ReplaceWithRegisterOperator', 'x')
+    xmap <silent> gr <Plug>ReplaceWithRegisterOperator
 endif
 
 " vim: set sts=4 sw=4 noexpandtab ff=unix fdm=syntax :
