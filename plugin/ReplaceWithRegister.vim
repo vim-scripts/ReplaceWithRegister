@@ -57,6 +57,9 @@
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 "
 " REVISION	DATE		REMARKS 
+"   1.02.009	25-Nov-2009	Replaced the <SID>Count workaround with
+"				:map-expr and an intermediate
+"				s:ReplaceWithRegisterOperatorExpression. 
 "   1.01.008	06-Oct-2009	Do not define "gr" mapping for select mode;
 "				printable characters should start insert mode. 
 "   1.00.007	05-Jul-2009	Renamed from ingooperators.vim. 
@@ -153,10 +156,15 @@ function! s:ReplaceWithRegisterOperator( type )
 	endif
     endtry
 endfunction
+function! s:ReplaceWithRegisterOperatorExpression( opfunc )
+    call s:SetRegister()
+    let &opfunc = a:opfunc
+    return 'g@'
+endfunction
 
 " This mapping repeats naturally, because it just sets a global things, and Vim
 " is able to repeat the g@ on its own. 
-nnoremap <script> <Plug>ReplaceWithRegisterOperator :<C-u>call <SID>SetRegister()<Bar>set opfunc=<SID>ReplaceWithRegisterOperator<Bar>execute 'nnoremap <SID>Count ' . (v:count ? v:count : '<Nop>')<CR><SID>Countg@
+nnoremap <expr> <Plug>ReplaceWithRegisterOperator <SID>ReplaceWithRegisterOperatorExpression('<SID>ReplaceWithRegisterOperator')
 " This mapping needs repeat.vim to be repeatable, because it contains of
 " multiple steps (visual selection + 'c' command inside
 " s:ReplaceWithRegisterOperator). 
