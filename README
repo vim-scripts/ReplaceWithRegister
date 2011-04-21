@@ -21,6 +21,9 @@ replacement is characterwise: In this case, no additional newline is inserted.
 RELATED WORKS
 - regreplop.vim (vimscript #2702) provides an alternative implementation of
   the same idea. 
+- operator-replace (vimscript #2782) provides replacement of {motion} only,
+  depends on another library of the author, and does not have a default
+  mapping. 
 
 USAGE
 ["x][count]gr{motion}
