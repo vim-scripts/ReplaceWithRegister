@@ -11,6 +11,20 @@
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 "
 " REVISION	DATE		REMARKS 
+"   1.20.014	26-Apr-2011	BUG: ReplaceWithRegisterOperator didn't work
+"				correctly with linewise motions (like "+"); need
+"				to use a linewise visual selection in this case. 
+"   1.20.013	23-Apr-2011	BUG: Text duplicated from yanked previous lines
+"				is inserted on a replacement of a visual
+"				blockwise selection. Need a special case, which
+"				actually is tricky because of the detection of
+"				the end-of-the-line in combination with having
+"				two cursor positions (via v_o) in a blockwise
+"				selection. Instead of following down that road,
+"				switch to a put in visual mode in combination
+"				with a save and restore of the unnamed register.
+"				This should handle all cases and doesn't require
+"				the autoindent workaround, neither. 
 "   1.10.012	18-Mar-2011	The operator-pending mapping now also handles
 "				'nomodifiable' and 'readonly' buffers without
 "				function errors. Add checking and probing inside
@@ -79,47 +93,48 @@ function! s:SetRegister()
     let s:register = v:register
 endfunction
 function! s:ReplaceWithRegister( type )
-    " It is important to delete into the black hole register, otherwise, the
-    " unnamed register will be clobbered, and this may contain the text we want
-    " to paste. 
-    let l:replaceOnVisualSelectionCommand = '"_c' . "\<C-R>\<C-O>" . s:register . "\<Esc>"
-    " If s:register is removed, repeat via '.' will fail on the above line,
-    " because s:register is undefined. 
-    "unlet s:register
+    " With a put in visual mode, the selected text will be replaced with the
+    " contents of the register. This works better than first deleting the
+    " selection into the black-hole register and then doing the insert; as 
+    " "d" + "i/a" has issues at the end-of-the line (especially with blockwise
+    " selections, where "v_o" can put the cursor at either end), and the "c"
+    " commands has issues with multiple insertion on blockwise selection and
+    " autoindenting. 
+    " With a put in visual mode, the previously selected text is put in the
+    " unnamed register, so we need to save and restore that. 
+    let l:save_clipboard = &clipboard
+    set clipboard= " Avoid clobbering the selection and clipboard registers. 
+    let l:save_reg = getreg('"')
+    let l:save_regmode = getregtype('"')
 
-    if a:type == 'visual'
-	" Note: The 'cc' command (and thus also 'c' on a linewise visual
-	" selection) preserves the indent of the first line if 'autoindent' is
-	" on (cp. :help cc), or if there is an 'indentexpr'. As we want a
-	" replacement exactly inside the former visual selection, we temporarily
-	" turn off all these things by setting 'paste'. 
-	setlocal paste
-	try
-	    execute 'normal! gv' . l:replaceOnVisualSelectionCommand
-	finally
-	    setlocal nopaste
-	endtry
-    else
-	" Note: :normal! `[c`] would keep the last moved-over character, as 'c'
-	" changes until the mark, but does not include it. The easiest way to get
-	" around this is to first establish a visual selection, then change that.
-	" However, even here we need to make sure to be "inclusive"! 
-	let l:save_selection = &selection
-	set selection=inclusive
-	try
-	    execute 'normal! `[v`]' . l:replaceOnVisualSelectionCommand
-	finally
-	    let &selection = l:save_selection
-	endtry
-    endif
+    " Note: Must not use ""p; this somehow replaces the selection with itself?! 
+    let l:pasteCmd = (s:register ==# '"' ? 'p' : '"' . s:register . 'p')
+    try
+	if a:type ==# 'visual'
+	    execute 'normal! gv' . l:pasteCmd
+	else
+	    " Note: Need to use an "inclusive" selection to make `] include the
+	    " last moved-over character. 
+	    let l:save_selection = &selection
+	    set selection=inclusive
+	    try
+		execute 'normal! `[' . (a:type ==# 'line' ? 'V' : 'v') . '`]' . l:pasteCmd
+	    finally
+		let &selection = l:save_selection
+	    endtry
+	endif
+    finally
+	call setreg('"', l:save_reg, l:save_regmode)
+	let &clipboard = l:save_clipboard
+    endtry
 endfunction
 function! s:ReplaceWithRegisterOperator( type, ... )
     let l:pasteText = getreg(s:register)
     let l:regType = getregtype(s:register)
     if l:regType ==# 'V' && l:pasteText =~# '\n$'
-	" Our custom operator is linewise, even in the ReplaceWithRegisterLine
-	" variant, in order to be able to replace less than entire lines (i.e.
-	" characterwise yanks). 
+	" Our custom operator is characterwise, even in the
+	" ReplaceWithRegisterLine variant, in order to be able to replace less
+	" than entire lines (i.e. characterwise yanks). 
 	" So there's a mismatch when the replacement text is a linewise yank,
 	" and the replacement would put an additional newline to the end.
 	" To fix that, we temporarily remove the trailing newline character from

@@ -97,6 +97,15 @@ IDEAS						   *ReplaceWithRegister-ideas*
 ==============================================================================
 HISTORY						 *ReplaceWithRegister-history*
 
+1.20	26-Apr-2011
+- BUG: ReplaceWithRegisterOperator didn't work correctly with linewise motions
+  (like "+"); need to use a linewise visual selection in this case. 
+- BUG: Text duplicated from yanked previous lines is inserted on a replacement
+  of a visual blockwise selection. Switch replacement mechanism to a put in
+  visual mode in combination with a save and restore of the unnamed register.
+  This should handle all cases and doesn't require the autoindent workaround,
+  neither. 
+
 1.10	21-Apr-2011
 - The operator-pending mapping now also handles 'nomodifiable' and 'readonly'
   buffers without function errors. 
