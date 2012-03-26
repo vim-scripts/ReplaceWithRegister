@@ -2,8 +2,7 @@
 "
 " DEPENDENCIES:
 "   - Requires Vim 7.0 or higher. 
-"   - repeat.vim (vimscript #2136) autoload script (optional). 
-"   - visualrepeat.vim autoload script (optional). 
+"   - ReplaceWithRegister.vim autoload script. 
 "
 " Copyright: (C) 2008-2011 by Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'. 
@@ -11,6 +10,40 @@
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 "
 " REVISION	DATE		REMARKS 
+"   1.30.019	21-Oct-2011	Employ repeat.vim to have the expression
+"				re-evaluated on repetition of the
+"				operator-pending mapping. 
+"				Pull <SID>Reselect into the main mapping (the
+"				final <Esc> is important to "seal" the visual
+"				selection and make it recallable via gv),
+"				because it doesn't multiply the selection size
+"				when [count] is given. 
+"   1.30.018	21-Oct-2011	BUG: <SID>Reselect swallows register repeat set
+"				by repeat.vim. Don't re-use
+"				<SID>ReplaceWithRegisterVisual and get rid of
+"				it, and instead insert <SID>Reselect in the
+"				middle of the expanded
+"				<Plug>ReplaceWithRegisterVisual, after the
+"				register handling, before the eventual function
+"				invocation. 
+"   1.30.017	30-Sep-2011	Add register registration to enhanced repeat.vim
+"				plugin, which also handles repetition when used
+"				together with the expression register "=. 
+"				Undo parallel <Plug>ReplaceWithRegisterRepeat...
+"				mappings, as this is now handled by the enhanced
+"				repeat.vim plugin. 
+"				No need for <silent> in default mappings. 
+"   1.30.015	24-Sep-2011	ENH: Handling use of expression register "=. 
+"				BUG: v:register is not replaced during command
+"				repetition, so repeat always used the unnamed
+"				register. Added parallel
+"				<Plug>ReplaceWithRegisterRepeat... mappings that
+"				omit the <SID>SetRegister() and <SID>IsExprReg()
+"				stuff and are registered for repetition instead
+"				of the original mappings. 
+"				Moved functions from plugin to separate autoload
+"				script. No need to pass <SID>-opfunc to
+"				ReplaceWithRegister#OperatorExpression(). 
 "   1.20.014	26-Apr-2011	BUG: ReplaceWithRegisterOperator didn't work
 "				correctly with linewise motions (like "+"); need
 "				to use a linewise visual selection in this case. 
@@ -89,110 +122,70 @@ if exists('g:loaded_ReplaceWithRegister') || (v:version < 700)
 endif
 let g:loaded_ReplaceWithRegister = 1
 
-function! s:SetRegister()
-    let s:register = v:register
-endfunction
-function! s:ReplaceWithRegister( type )
-    " With a put in visual mode, the selected text will be replaced with the
-    " contents of the register. This works better than first deleting the
-    " selection into the black-hole register and then doing the insert; as 
-    " "d" + "i/a" has issues at the end-of-the line (especially with blockwise
-    " selections, where "v_o" can put the cursor at either end), and the "c"
-    " commands has issues with multiple insertion on blockwise selection and
-    " autoindenting. 
-    " With a put in visual mode, the previously selected text is put in the
-    " unnamed register, so we need to save and restore that. 
-    let l:save_clipboard = &clipboard
-    set clipboard= " Avoid clobbering the selection and clipboard registers. 
-    let l:save_reg = getreg('"')
-    let l:save_regmode = getregtype('"')
-
-    " Note: Must not use ""p; this somehow replaces the selection with itself?! 
-    let l:pasteCmd = (s:register ==# '"' ? 'p' : '"' . s:register . 'p')
-    try
-	if a:type ==# 'visual'
-	    execute 'normal! gv' . l:pasteCmd
-	else
-	    " Note: Need to use an "inclusive" selection to make `] include the
-	    " last moved-over character. 
-	    let l:save_selection = &selection
-	    set selection=inclusive
-	    try
-		execute 'normal! `[' . (a:type ==# 'line' ? 'V' : 'v') . '`]' . l:pasteCmd
-	    finally
-		let &selection = l:save_selection
-	    endtry
-	endif
-    finally
-	call setreg('"', l:save_reg, l:save_regmode)
-	let &clipboard = l:save_clipboard
-    endtry
-endfunction
-function! s:ReplaceWithRegisterOperator( type, ... )
-    let l:pasteText = getreg(s:register)
-    let l:regType = getregtype(s:register)
-    if l:regType ==# 'V' && l:pasteText =~# '\n$'
-	" Our custom operator is characterwise, even in the
-	" ReplaceWithRegisterLine variant, in order to be able to replace less
-	" than entire lines (i.e. characterwise yanks). 
-	" So there's a mismatch when the replacement text is a linewise yank,
-	" and the replacement would put an additional newline to the end.
-	" To fix that, we temporarily remove the trailing newline character from
-	" the register contents and set the register type to characterwise yank. 
-	call setreg(s:register, strpart(l:pasteText, 0, len(l:pasteText) - 1), 'v')
-    endif
-    try
-	call s:ReplaceWithRegister(a:type)
-    finally
-	if l:regType ==# 'V' && l:pasteText =~# '\n$'
-	    " Undo the temporary change of the register. 
-	    call setreg(s:register, l:pasteText, l:regType)
-	endif
-    endtry
-
-    if a:0
-	silent! call repeat#set(a:1)
-	silent! call visualrepeat#set_also("\<Plug>ReplaceWithRegisterVisual")
-    else
-	silent! call visualrepeat#set("\<Plug>ReplaceWithRegisterVisual")
-    endif
-endfunction
-function! s:ReplaceWithRegisterOperatorExpression( opfunc )
-    call s:SetRegister()
-    let &opfunc = a:opfunc
-
-    let l:keys = 'g@'
-    if ! &l:modifiable || &l:readonly
-	" Probe for "Cannot make changes" error and readonly warning via a no-op
-	" dummy modification. 
-	" In the case of a nomodifiable buffer, Vim will abort the normal mode
-	" command chain, discard the g@, and thus not invoke the operatorfunc. 
-	let l:keys = "\"=''\<CR>p" . l:keys
-    endif
-    return l:keys
-endfunction
+let s:save_cpo = &cpo
+set cpo&vim
 
 " This mapping repeats naturally, because it just sets global things, and Vim is
 " able to repeat the g@ on its own. 
-nnoremap <expr> <Plug>ReplaceWithRegisterOperator <SID>ReplaceWithRegisterOperatorExpression('<SID>ReplaceWithRegisterOperator')
+nnoremap <expr> <Plug>ReplaceWithRegisterOperator ReplaceWithRegister#OperatorExpression()
+" But we need repeat.vim to get the expression register re-evaluated: When Vim's
+" . command re-invokes 'opfunc', the expression isn't re-evaluated, an
+" inconsistency with the other mappings. We creatively use repeat.vim to sneak
+" in the expression evaluation then. 
+nnoremap <silent> <Plug>ReplaceWithRegisterExpressionSpecial :<C-u>let g:ReplaceWithRegister_expr = getreg('=')<Bar>execute 'normal!' v:count1 . '.'<CR>
+
 " This mapping needs repeat.vim to be repeatable, because it contains of
 " multiple steps (visual selection + 'c' command inside
-" s:ReplaceWithRegisterOperator). 
-nnoremap <silent> <Plug>ReplaceWithRegisterLine     :<C-u>call setline(1, getline(1))<Bar>call <SID>SetRegister()<Bar>execute 'normal! V' . v:count1 . "_\<lt>Esc>"<Bar>call <SID>ReplaceWithRegisterOperator('visual', "\<lt>Plug>ReplaceWithRegisterLine")<CR>
-" Repeat not defined in visual mode. 
-vnoremap <silent> <SID>ReplaceWithRegisterVisual :<C-u>call setline(1, getline(1))<Bar>call <SID>SetRegister()<Bar>call <SID>ReplaceWithRegisterOperator('visual', "\<lt>Plug>ReplaceWithRegisterVisual")<CR>
-vnoremap <silent> <script> <Plug>ReplaceWithRegisterVisual <SID>ReplaceWithRegisterVisual
-nnoremap <expr> <SID>Reselect '1v' . (visualmode() !=# 'V' && &selection ==# 'exclusive' ? ' ' : '')
-nnoremap <silent> <script> <Plug>ReplaceWithRegisterVisual <SID>Reselect<SID>ReplaceWithRegisterVisual
+" ReplaceWithRegister#Operator). 
+nnoremap <silent> <Plug>ReplaceWithRegisterLine
+\ :<C-u>call setline(1, getline(1))<Bar>
+\silent! call repeat#setreg("\<lt>Plug>ReplaceWithRegisterLine", v:register)<Bar>
+\call ReplaceWithRegister#SetRegister()<Bar>
+\if ReplaceWithRegister#IsExprReg()<Bar>
+\    let g:ReplaceWithRegister_expr = getreg('=')<Bar>
+\endif<Bar>
+\execute 'normal! V' . v:count1 . "_\<lt>Esc>"<Bar>
+\call ReplaceWithRegister#Operator('visual', "\<lt>Plug>ReplaceWithRegisterLine")<CR>
+
+" Repeat not defined in visual mode, but enabled through visualrepeat.vim. 
+vnoremap <silent> <Plug>ReplaceWithRegisterVisual
+\ :<C-u>call setline(1, getline(1))<Bar>
+\silent! call repeat#setreg("\<lt>Plug>ReplaceWithRegisterVisual", v:register)<Bar>
+\call ReplaceWithRegister#SetRegister()<Bar>
+\if ReplaceWithRegister#IsExprReg()<Bar>
+\    let g:ReplaceWithRegister_expr = getreg('=')<Bar>
+\endif<Bar>
+\call ReplaceWithRegister#Operator('visual', "\<lt>Plug>ReplaceWithRegisterVisual")<CR>
+
+" A normal-mode repeat of the visual mapping is triggered by repeat.vim. It
+" establishes a new selection at the cursor position, of the same mode and size
+" as the last selection.
+"   If [count] is given, the size is multiplied accordingly. This has the side
+"   effect that a repeat with [count] will persist the expanded size, which is
+"   different from what the normal-mode repeat does (it keeps the scope of the
+"   original command). 
+" First of all, the register must be handled, though. 
+nnoremap <silent> <Plug>ReplaceWithRegisterVisual
+\ :<C-u>call setline(1, getline(1))<Bar>
+\silent! call repeat#setreg("\<lt>Plug>ReplaceWithRegisterVisual", v:register)<Bar>
+\call ReplaceWithRegister#SetRegister()<Bar>
+\if ReplaceWithRegister#IsExprReg()<Bar>
+\    let g:ReplaceWithRegister_expr = getreg('=')<Bar>
+\endif<Bar>
+\execute 'normal!' v:count1 . 'v' . (visualmode() !=# 'V' && &selection ==# 'exclusive' ? ' ' : ''). "\<lt>Esc>"<Bar>
+\call ReplaceWithRegister#Operator('visual', "\<lt>Plug>ReplaceWithRegisterVisual")<CR>
+
 
 if ! hasmapto('<Plug>ReplaceWithRegisterOperator', 'n')
-    nmap <silent> gr <Plug>ReplaceWithRegisterOperator
+    nmap gr <Plug>ReplaceWithRegisterOperator
 endif
 if ! hasmapto('<Plug>ReplaceWithRegisterLine', 'n')
-    nmap <silent> grr <Plug>ReplaceWithRegisterLine
+    nmap grr <Plug>ReplaceWithRegisterLine
 endif
 if ! hasmapto('<Plug>ReplaceWithRegisterVisual', 'x')
-    xmap <silent> gr <Plug>ReplaceWithRegisterVisual
+    xmap gr <Plug>ReplaceWithRegisterVisual
 endif
 
-" vim: set sts=4 sw=4 noexpandtab ff=unix fdm=syntax :
+let &cpo = s:save_cpo
+unlet s:save_cpo
+" vim: set ts=8 sts=4 sw=4 noexpandtab ff=unix fdm=syntax :

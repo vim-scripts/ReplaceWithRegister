@@ -38,6 +38,8 @@ RELATED WORKS								     *
 - operator-replace (vimscript #2782) provides replacement of {motion} only,
   depends on another library of the author, and does not have a default
   mapping. 
+- Luc Hermitte has an elegant minimalistic visual-mode mapping in
+  http://code.google.com/p/lh-vim/source/browse/misc/trunk/macros/repl-visual-no-reg-overwrite.vim
 
 ==============================================================================
 USAGE						   *ReplaceWithRegister-usage*
@@ -65,7 +67,8 @@ To uninstall, use the |:RmVimball| command.
 DEPENDENCIES				    *ReplaceWithRegister-dependencies*
 
 - Requires Vim 7.0 or higher. 
-- repeat.vim (vimscript #2136) autoload script (optional). 
+- repeat.vim (vimscript #2136) plugin (optional). 
+- visualrepeat.vim (vimscript #3848) plugin (optional). 
 
 ==============================================================================
 CONFIGURATION				   *ReplaceWithRegister-configuration*
@@ -87,6 +90,15 @@ LIMITATIONS				     *ReplaceWithRegister-limitations*
 - The commands don't work on the expression register "=. Nothing is pasted. 
 - The mode cannot be set for register "/; it will always be pasted
   characterwise. Implement a special case for glp? 
+- With :set selection=clipboard together with either "autoselect" (in the
+  console) or a 'guioptions' setting that contains "a" (in the GUI), the
+  mappings don't seem to work. This is because they all temporarily create a
+  visual selection, whose contents are put into register *, which is the
+  default register due to the 'selection' setting. Therefore, the replacement
+  replaces itself. The same happens when you try to replace the visual
+  selection via the built-in |v_p| command. Either don't use these settings in
+  combination, or explicitly select the default register by prepending "" to
+  the mappings. 
 
 KNOWN PROBLEMS				  *ReplaceWithRegister-known-problems*
 
@@ -96,6 +108,19 @@ IDEAS						   *ReplaceWithRegister-ideas*
 
 ==============================================================================
 HISTORY						 *ReplaceWithRegister-history*
+
+1.30	06-Dec-2011
+- Adaptations for blockwise replace: 
+  - If the register contains just a single line, temporarily duplicate the
+    line to match the height of the blockwise selection. 
+  - If the register contains multiple lines, paste as blockwise. 
+- BUG: v:register is not replaced during command repetition, so repeat always
+  used the unnamed register. Add register registration to enhanced repeat.vim
+  plugin, which also handles repetition when used together with the expression
+  register "=. Requires a so far inofficial update to repeat.vim version 1.0
+  (that hopefully makes it into upstream), which is available at
+  https://github.com/inkarkat/vim-repeat/zipball/1.0ENH1
+- Moved functions from plugin to separate autoload script. 
 
 1.20	26-Apr-2011
 - BUG: ReplaceWithRegisterOperator didn't work correctly with linewise motions
