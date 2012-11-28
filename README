@@ -26,14 +26,16 @@ RELATED WORKS
   mapping.
 - Luc Hermitte has an elegant minimalistic visual-mode mapping in
   http://code.google.com/p/lh-vim/source/browse/misc/trunk/macros/repl-visual-no-reg-overwrite.vim
+- EasyClip (https://github.com/svermeulen/vim-easyclip) changes the delete
+  commands to stop yanking, introduces a new "m" command for cutting, and also
+  provides an "s" substitution operator that pastes register contents over the
+  moved-over text.
 
 USAGE
-["x][count]gr{motion}
-                        Replace {motion} text with the contents of register x.
+["x][count]gr{motion}   Replace {motion} text with the contents of register x.
                         Especially when using the unnamed register, this is
                         quicker than "_d{motion}P or "_c{motion}<C-R>"
-["x][count]grr
-                        Replace [count] lines with the contents of register x.
+["x][count]grr          Replace [count] lines with the contents of register x.
                         To replace from the cursor position to the end of the
                         line use ["x]gr$
 {Visual}["x]gr          Replace the selection with the contents of register x.
