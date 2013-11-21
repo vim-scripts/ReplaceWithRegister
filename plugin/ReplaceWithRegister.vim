@@ -4,12 +4,18 @@
 "   - Requires Vim 7.0 or higher.
 "   - ReplaceWithRegister.vim autoload script
 "
-" Copyright: (C) 2008-2012 Ingo Karkat
+" Copyright: (C) 2008-2013 Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 "
 " REVISION	DATE		REMARKS
+"   1.40.023	18-Apr-2013	Use optional visualrepeat#reapply#VisualMode()
+"				for normal mode repeat of a visual mapping.
+"				When supplying a [count] on such repeat of a
+"				previous linewise selection, now [count] number
+"				of lines instead of [count] times the original
+"				selection is used.
 "   1.31.021	28-Nov-2012	BUG: When repeat.vim is not installed, the grr
 "				and v_gr mappings do nothing. Need to :execute
 "				the :silent! call of repeat.vim to avoid that
@@ -167,10 +173,10 @@ vnoremap <silent> <Plug>ReplaceWithRegisterVisual
 " A normal-mode repeat of the visual mapping is triggered by repeat.vim. It
 " establishes a new selection at the cursor position, of the same mode and size
 " as the last selection.
-"   If [count] is given, the size is multiplied accordingly. This has the side
-"   effect that a repeat with [count] will persist the expanded size, which is
-"   different from what the normal-mode repeat does (it keeps the scope of the
-"   original command).
+"   If [count] is given, that number of lines is used / the original size is
+"   multiplied accordingly. This has the side effect that a repeat with [count]
+"   will persist the expanded size, which is different from what the normal-mode
+"   repeat does (it keeps the scope of the original command).
 " First of all, the register must be handled, though.
 nnoremap <silent> <Plug>ReplaceWithRegisterVisual
 \ :<C-u>call setline('.', getline('.'))<Bar>
@@ -179,7 +185,7 @@ nnoremap <silent> <Plug>ReplaceWithRegisterVisual
 \if ReplaceWithRegister#IsExprReg()<Bar>
 \    let g:ReplaceWithRegister_expr = getreg('=')<Bar>
 \endif<Bar>
-\execute 'normal!' v:count1 . 'v' . (visualmode() !=# 'V' && &selection ==# 'exclusive' ? ' ' : ''). "\<lt>Esc>"<Bar>
+\execute 'normal!' ReplaceWithRegister#VisualMode()<Bar>
 \call ReplaceWithRegister#Operator('visual', "\<lt>Plug>ReplaceWithRegisterVisual")<CR>
 
 

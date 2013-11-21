@@ -3,13 +3,19 @@
 " DEPENDENCIES:
 "   - repeat.vim (vimscript #2136) autoload script (optional)
 "   - visualrepeat.vim (vimscript #3848) autoload script (optional)
+"   - visualrepeat/reapply.vim autoload script (optional)
 "
-" Copyright: (C) 2011 Ingo Karkat
+" Copyright: (C) 2011-2013 Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 "
 " REVISION	DATE		REMARKS
+"   1.40.008	18-Apr-2013	Add ReplaceWithRegister#VisualMode() wrapper
+"				around visualrepeat#reapply#VisualMode().
+"   1.32.007	21-Mar-2013	Avoid changing the jumplist.
+"   1.32.006	28-Dec-2012	Minor: Correct lnum for no-modifiable buffer
+"				check.
 "   1.30.005	06-Dec-2011	Retire visualrepeat#set_also(); use
 "				visualrepeat#set() everywhere.
 "   1.30.004	21-Oct-2011	Employ repeat.vim to have the expression
@@ -109,7 +115,7 @@ function! s:ReplaceWithRegister( type )
 	    let l:save_selection = &selection
 	    set selection=inclusive
 	    try
-		execute 'normal! `[' . (a:type ==# 'line' ? 'V' : 'v') . '`]' . l:pasteCmd
+		execute 'normal! g`[' . (a:type ==# 'line' ? 'V' : 'v') . 'g`]' . l:pasteCmd
 	    finally
 		let &selection = l:save_selection
 	    endtry
@@ -154,7 +160,7 @@ function! ReplaceWithRegister#OperatorExpression()
 	" dummy modification.
 	" In the case of a nomodifiable buffer, Vim will abort the normal mode
 	" command chain, discard the g@, and thus not invoke the operatorfunc.
-	let l:keys = ":call setline(1, getline(1))\<CR>" . l:keys
+	let l:keys = ":call setline('.', getline('.'))\<CR>" . l:keys
     endif
 
     if v:register ==# '='
@@ -162,6 +168,12 @@ function! ReplaceWithRegister#OperatorExpression()
 	let l:keys = ":let g:ReplaceWithRegister_expr = getreg('=')\<CR>" . l:keys
     endif
 
+    return l:keys
+endfunction
+
+function! ReplaceWithRegister#VisualMode()
+    let l:keys = "1v\<Esc>"
+    silent! let l:keys = visualrepeat#reapply#VisualMode(0)
     return l:keys
 endfunction
 

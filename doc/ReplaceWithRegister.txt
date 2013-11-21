@@ -31,6 +31,12 @@ replacement command / selection, not by the register contents. This avoids
 surprises like when the replacement text was a linewise yank, but the
 replacement is characterwise: In this case, no additional newline is inserted.
 
+SEE ALSO								     *
+
+- ReplaceWithSameIndentRegister.vim (vimscript #0000) is a companion plugin
+  for the special (but frequent) case of replacing lines while keeping the
+  original indent.
+
 RELATED WORKS								     *
 
 - regreplop.vim (vimscript #2702) provides an alternative implementation of
@@ -40,6 +46,10 @@ RELATED WORKS								     *
   mapping.
 - Luc Hermitte has an elegant minimalistic visual-mode mapping in
   http://code.google.com/p/lh-vim/source/browse/misc/trunk/macros/repl-visual-no-reg-overwrite.vim
+- EasyClip (https://github.com/svermeulen/vim-easyclip) changes the delete
+  commands to stop yanking, introduces a new "m" command for cutting, and also
+  provides an "s" substitution operator that pastes register contents over the
+  moved-over text.
 
 ==============================================================================
 USAGE						   *ReplaceWithRegister-usage*
@@ -69,13 +79,12 @@ DEPENDENCIES				    *ReplaceWithRegister-dependencies*
 - Requires Vim 7.0 or higher.
 - repeat.vim (vimscript #2136) plugin (optional)
   To support repetition with a register other than the default register, you
-  need a plugin version later than the 1.0 version published on vim.org. You
-  can download it from the repository at https://github.com/tpope/vim-repeat
-- visualrepeat.vim (vimscript #3848) plugin (optional)
+  need version 1.1 or later.
+- visualrepeat.vim (vimscript #3848) plugin (version 2.00 or higher; optional)
 
 ==============================================================================
 CONFIGURATION				   *ReplaceWithRegister-configuration*
-
+						   *ReplaceWithRegister-remap*
 The default mappings override the (rarely used, but somewhat related) |gr|
 command (replace virtual characters under the cursor with {char}).
 If you want to use different mappings, map your keys to the
@@ -83,14 +92,11 @@ If you want to use different mappings, map your keys to the
 (e.g. in your |vimrc|): >
     nmap <Leader>r  <Plug>ReplaceWithRegisterOperator
     nmap <Leader>rr <Plug>ReplaceWithRegisterLine
-    vmap <Leader>r  <Plug>ReplaceWithRegisterVisual
+    xmap <Leader>r  <Plug>ReplaceWithRegisterVisual
 <
 ==============================================================================
 LIMITATIONS				     *ReplaceWithRegister-limitations*
 
-- The commands don't work on the readonly registers ":, "., "% and "#. "E384:
-  Invalid register name" is printed.
-- The commands don't work on the expression register "=. Nothing is pasted.
 - The mode cannot be set for register "/; it will always be pasted
   characterwise. Implement a special case for glp?
 - With :set selection=clipboard together with either "autoselect" (in the
@@ -111,6 +117,13 @@ IDEAS						   *ReplaceWithRegister-ideas*
 
 ==============================================================================
 HISTORY						 *ReplaceWithRegister-history*
+
+1.40	21-Nov-2013
+- Avoid changing the jumplist.
+- Use optional visualrepeat#reapply#VisualMode() for normal mode repeat of a
+  visual mapping. When supplying a [count] on such repeat of a previous
+  linewise selection, now [count] number of lines instead of [count] times the
+  original selection is used.
 
 1.31	28-Nov-2012
 BUG: When repeat.vim is not installed, the grr and v_gr mappings do nothing.
@@ -171,8 +184,8 @@ First published version.
 Started development.
 
 ==============================================================================
-Copyright: (C) 2008-2011 Ingo Karkat
-The VIM LICENSE applies to this script; see |copyright|.
+Copyright: (C) 2008-2013 Ingo Karkat
+The VIM LICENSE applies to this plugin; see |copyright|.
 
 Maintainer:	Ingo Karkat <ingo@karkat.de>
 ==============================================================================
