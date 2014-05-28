@@ -118,6 +118,10 @@ IDEAS						   *ReplaceWithRegister-ideas*
 ==============================================================================
 HISTORY						 *ReplaceWithRegister-history*
 
+1.41	28-May-2014
+- Also handle empty exclusive selection and empty text object
+  (e.g. gri" on "").
+
 1.40	21-Nov-2013
 - Avoid changing the jumplist.
 - Use optional visualrepeat#reapply#VisualMode() for normal mode repeat of a
@@ -184,7 +188,7 @@ First published version.
 Started development.
 
 ==============================================================================
-Copyright: (C) 2008-2013 Ingo Karkat
+Copyright: (C) 2008-2014 Ingo Karkat
 The VIM LICENSE applies to this plugin; see |copyright|.
 
 Maintainer:	Ingo Karkat <ingo@karkat.de>
