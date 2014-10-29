@@ -11,6 +11,8 @@
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 "
 " REVISION	DATE		REMARKS
+"   1.42.010	27-Jun-2014	BUG: Off-by-one error in previously introduced
+"				s:IsOnOrAfter(); actually need to use s:IsAfter().
 "   1.41.009	28-May-2014	Also handle empty exclusive selection and empty
 "				text object (e.g. gri" on "").
 "   1.40.008	18-Apr-2013	Add ReplaceWithRegister#VisualMode() wrapper
@@ -48,8 +50,8 @@ endfunction
 
 " Note: Could use ingo#pos#IsOnOrAfter(), but avoid dependency to ingo-library
 " for now.
-function! s:IsOnOrAfter( posA, posB )
-    return (a:posA[1] > a:posB[1] || a:posA[1] == a:posB[1] && a:posA[2] >= a:posB[2])
+function! s:IsAfter( posA, posB )
+    return (a:posA[1] > a:posB[1] || a:posA[1] == a:posB[1] && a:posA[2] > a:posB[2])
 endfunction
 function! s:CorrectForRegtype( type, register, regType, pasteText )
     if a:type ==# 'visual' && visualmode() ==# "\<C-v>" || a:type[0] ==# "\<C-v>"
@@ -118,15 +120,15 @@ function! s:ReplaceWithRegister( type )
 "****D echomsg '**** visual' string(getpos("'<")) string(getpos("'>")) string(l:pasteRegister)
 	    if &selection ==# 'exclusive' && getpos("'<") == getpos("'>")
 		" In case of an empty selection, just paste before the cursor
-		" position; reestabishing the empty selection would override the
-		" current character, a peculiarity of how selections work.
+		" position; reestablishing the empty selection would override
+		" the current character, a peculiarity of how selections work.
 		execute 'normal!' l:pasteRegister . 'P'
 	    else
 		execute 'normal! gv' . l:pasteRegister . 'p'
 	    endif
 	else
 "****D echomsg '**** operator' string(getpos("'[")) string(getpos("']")) string(l:pasteRegister)
-	    if s:IsOnOrAfter(getpos("'["), getpos("']"))
+	    if s:IsAfter(getpos("'["), getpos("']"))
 		execute 'normal!' l:pasteRegister . 'P'
 	    else
 		" Note: Need to use an "inclusive" selection to make `] include

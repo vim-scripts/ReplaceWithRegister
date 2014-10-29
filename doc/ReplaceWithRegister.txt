@@ -33,9 +33,11 @@ replacement is characterwise: In this case, no additional newline is inserted.
 
 SEE ALSO								     *
 
-- ReplaceWithSameIndentRegister.vim (vimscript #0000) is a companion plugin
+- ReplaceWithSameIndentRegister.vim (vimscript #5046) is a companion plugin
   for the special (but frequent) case of replacing lines while keeping the
   original indent.
+- LineJugglerCommands.vim (vimscript #4465) provides a similar :Replace [["]x]
+  Ex command.
 
 RELATED WORKS								     *
 
@@ -55,10 +57,10 @@ RELATED WORKS								     *
 USAGE						   *ReplaceWithRegister-usage*
 
 							     *gr* *grr* *v_gr*
-["x][count]gr{motion}	Replace {motion} text with the contents of register x.
+[count]["x]gr{motion}	Replace {motion} text with the contents of register x.
 			Especially when using the unnamed register, this is
 			quicker than "_d{motion}P or "_c{motion}<C-R>"
-["x][count]grr		Replace [count] lines with the contents of register x.
+[count]["x]grr		Replace [count] lines with the contents of register x.
 			To replace from the cursor position to the end of the
 			line use ["x]gr$
 {Visual}["x]gr		Replace the selection with the contents of register x.
@@ -117,6 +119,10 @@ IDEAS						   *ReplaceWithRegister-ideas*
 
 ==============================================================================
 HISTORY						 *ReplaceWithRegister-history*
+
+1.42	29-Oct-2014
+- BUG: Previous version 1.41 broke replacement of single character with
+  gr{motion}.
 
 1.41	28-May-2014
 - Also handle empty exclusive selection and empty text object
